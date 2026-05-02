@@ -1,0 +1,13 @@
+# Streamlit configuration for production deployment.
+
+[server]
+# Allow ZIP uploads up to 200 MB — generous enough for a full SAP Best
+# Practices content package.
+maxUploadSize = 200
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+# A modest dark accent matching SAP brand without being garish.
+primaryColor = "#0070F2"
