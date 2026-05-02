@@ -128,18 +128,31 @@ with st.sidebar:
 
     output_format = st.radio(
         "Output format",
-        options=["Inline (per template)", "Expanded (sub-headings)"],
+        options=[
+            "Markdown — Inline (per template)",
+            "Markdown — Expanded (sub-headings)",
+            "Excel (.xlsx) — 2 sheets",
+        ],
         index=1,
+        help=(
+            "**Markdown** outputs are best for documentation and pasting "
+            "into wikis or chat. **Excel** is best for review meetings, "
+            "filtering by dependency or business role, or pasting into "
+            "estimation workbooks."
+        ),
     )
 
     include_process_steps = st.checkbox(
         "Include Process Steps table per scope item",
         value=False,
         help=(
-            "When enabled, the §3 Overview Table from each Test Script is "
-            "rendered as a Markdown table in the output. Page references "
-            "like '[page ] 58' are stripped automatically."
+            "Affects **Markdown output only**. When enabled, the §3 "
+            "Overview Table from each Test Script is rendered as a "
+            "Markdown table. Page references like '[page ] 58' are "
+            "stripped automatically. Excel output always includes "
+            "Process Steps as a dedicated second sheet."
         ),
+        disabled=output_format.startswith("Excel"),
     )
 
     st.divider()
@@ -245,9 +258,51 @@ if "items" in st.session_state:
     c4.metric("Total dependency edges",
               sum(len(i.dependencies) for i in items_list))
 
-    # Export summary as CSV (useful for spot-checking)
+    # --- Download (main output) — moved up so it's not buried below the
+    #     overrides expander, which previous users were missing entirely.
+    st.divider()
+    st.subheader("📥 Download output")
+
+    if output_format.startswith("Excel"):
+        from excel_writer import render_xlsx
+        xlsx_bytes = render_xlsx(items_list)
+        st.download_button(
+            label="⬇️ Download Excel workbook (.xlsx)",
+            data=xlsx_bytes,
+            file_name="scope_items.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            type="primary",
+            use_container_width=True,
+        )
+        st.caption(
+            "**Sheet 1 — Scope Items**: one row per scope item with ID, "
+            "Name, Process Description, and Dependencies.  \n"
+            "**Sheet 2 — Process Steps**: one row per actionable step "
+            "(group-heading rows in the source are excluded). Both sheets "
+            "have frozen headers and auto-filter enabled."
+        )
+    else:
+        if "Inline" in output_format:
+            md = render_inline_template(
+                items_list, include_process_steps=include_process_steps)
+        else:
+            md = render_expanded(
+                items_list, include_process_steps=include_process_steps)
+
+        st.download_button(
+            label="⬇️ Download consolidated Markdown (.md)",
+            data=md.encode("utf-8"),
+            file_name="scope_items.md",
+            mime="text/markdown",
+            type="primary",
+            use_container_width=True,
+        )
+        with st.expander("Preview Markdown output", expanded=False):
+            st.markdown(md)
+
+    # Secondary download — handy for spot-checking, but not the main output
     st.download_button(
-        "⬇️ Download summary CSV",
+        "⬇️ Also download the summary table as CSV (optional)",
         data=df.to_csv(index=False).encode("utf-8"),
         file_name="extraction_summary.csv",
         mime="text/csv",
@@ -344,25 +399,8 @@ if "items" in st.session_state:
                 mime="application/json",
             )
 
-    # --- Render Markdown ---
-    if output_format.startswith("Inline"):
-        md = render_inline_template(items_list, include_process_steps=include_process_steps)
-    else:
-        md = render_expanded(items_list, include_process_steps=include_process_steps)
-
+    # --- Per-item inspector ---
     st.divider()
-    st.subheader("📥 Download")
-    st.download_button(
-        label="⬇️ Download consolidated Markdown",
-        data=md.encode("utf-8"),
-        file_name="scope_items.md",
-        mime="text/markdown",
-        type="primary",
-    )
-
-    with st.expander("Preview Markdown output", expanded=False):
-        st.markdown(md)
-
     with st.expander("Inspect raw extraction per scope item", expanded=False):
         for item in items_list:
             st.markdown(f"##### {item.scope_id} — {item.name or '?'}")

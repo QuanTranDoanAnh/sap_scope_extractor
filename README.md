@@ -154,3 +154,34 @@ GFM. Pipes `|` inside cells are escaped.
 The "Steps" column in the summary table shows how many real (non-group)
 steps were extracted per scope item, useful for spotting any cases where
 extraction returned zero rows.
+
+## v3.3 — Excel output
+
+Added Excel (.xlsx) as a third output format alongside the two
+Markdown variants. Selectable via the sidebar's "Output format" radio.
+
+The Excel workbook contains exactly two sheets:
+
+**Sheet 1 — Scope Items.** One row per scope item with these columns:
+  - Scope Item ID
+  - Scope Item Name
+  - Process Description (wrap-text, full content)
+  - Dependencies (one dep per line: `<ID> – <Name> (<kind>)`)
+
+**Sheet 2 — Process Steps.** One row per actionable step (group-heading
+rows from the source documents are excluded, since they have no
+Business Role / Transaction / Expected Results to populate). Columns:
+  - Scope Item ID
+  - Scope Item Name
+  - Process Step
+  - Business Roles
+  - Transaction/App
+  - Expected Results
+
+Both sheets ship with bold headers (Calibri, white-on-blue), frozen
+top row, auto-filter on the header, sensible column widths, and
+wrap-text on long-text columns. No formulas — pure data export.
+
+The "Include Process Steps table" checkbox affects Markdown only; the
+Excel format always includes the Process Steps sheet. The checkbox
+greys out automatically when Excel is selected.
